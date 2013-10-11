@@ -1,0 +1,8 @@
+Private-Package: org.apache.felix.dm.impl,\
+	org.apache.felix.dm.impl.dependencies,\
+	org.apache.felix.dm.impl.index,\
+	org.apache.felix.dm.impl.index.multiproperty,\
+	org.apache.felix.dm.impl.metatype
+Export-Package: org.apache.felix.dm,\
+	org.apache.felix.dm.tracker
+Bundle-Version: 3.1.1
