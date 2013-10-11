@@ -20,15 +20,17 @@ package org.apache.felix.dm.impl.index.multiproperty;
 
 import java.util.Set;
 import java.util.TreeSet;
-
 /**
  * @author <a href="mailto:dev@felix.apache.org">Felix Project Team</a>
  */
-import java.util.Set;
-import java.util.TreeSet;
 
 public class Property {
-	boolean m_negate;
+	
+	public static int NONE = 0;
+	public static int NEGATE = 1;
+	public static int MULTI = 2;
+
+	int m_flag = -1;
 	boolean m_valid = true;
 	String m_key;
 	String m_value;
@@ -37,27 +39,27 @@ public class Property {
 	public Property() {
 	}
 	
-	public Property(boolean negate, String key, String value) {
+	public Property(int flag, String key, String value) {
 		super();
-		this.m_negate = negate;
+		this.m_flag = flag;
 		this.m_key = key.toLowerCase();
 		this.m_values.add(value);
 		this.m_value = value;
 	}
 
 	public void setNegate(boolean negate) {
-		this.m_negate = negate;
+		this.m_flag = NEGATE;
+	}
+	
+	public int getFlag() {
+		return m_flag;
 	}
 	
 	public void setKey(String key) {
 		this.m_key = key.toLowerCase();
 	}
 	
-	public void addValue(String value, boolean negate) {
-		if (this.m_negate != negate) {
-			// multiproperty with different negations, causes invalid configuration.
-			m_valid = false;
-		}
+	public void addValue(String value) {
 		if (this.m_value == null) {
 			// value has not bee set yet
 			this.m_value = value;
@@ -68,7 +70,7 @@ public class Property {
 	}
 	
 	public boolean isNegate() {
-		return m_negate;
+		return m_flag == NEGATE;
 	}
 	
 	public String getKey() {
@@ -82,21 +84,29 @@ public class Property {
 	public Set getValues() {
 		return m_values;
 	}
-	
-	public boolean isWildcard() {
-		return "*".equals(m_value);
-	}
-	
-	public boolean isMultiValue() {
-		return m_values.size() > 1;
-	}
 
 	public String toString() {
-		return "Property [negate=" + m_negate + ", key=" + m_key + ", values="
+		return "Property [flag=" + m_flag + ", key=" + m_key + ", values="
 				+ m_values + "]";
+	}
+	
+	public void invalidate() {
+		m_valid = false;
 	}
 	
 	public boolean isValid() {
 		return m_valid;
+	}
+
+	public void setMulti(boolean multi) {
+		m_flag = MULTI;
+	}
+	
+	public boolean isMulti() {
+		return m_flag == MULTI;
+	}
+
+	public boolean hasMultipleValues() {
+		return m_values.size() > 1;
 	}
 }

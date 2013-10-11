@@ -45,11 +45,14 @@ import org.osgi.framework.ServiceReference;
  */
 public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCustomizer {
 
+	protected static final char KEY_SEPARATOR = ValueCache.enabled ? (char) 65534 : ';'; // ;
+	protected static final char VALUE_SEPARATOR = ValueCache.enabled ? (char) 65535 : ','; // ,
     private final Object m_lock = new Object();
     private ServiceTracker m_tracker;
     private BundleContext m_context;
 	private Map /* <String, Property> */ m_configProperties = new LinkedHashMap();
 	private List /* <String> */ m_negatePropertyKeys = new ArrayList();
+	private List /* <String> */ m_singleMultiPropertyKeys = new ArrayList();
     private final Map /* <String, List<ServiceReference>> */ m_keyToServiceReferencesMap = new HashMap();
     private final Map /* <String, List<ServiceListener>> */ m_keyToListenersMap = new HashMap();
     private final Map /* <ServiceListener, String> */ m_listenerToFilterMap = new HashMap();
@@ -82,11 +85,25 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
 				return false;
 			} 
 		}
+		if (hasMultiValueFilterForSingleMultiConfig(filter)) {
+			return false;
+		}
 		// our properties match so we're applicable
 		return true;
 	}
 	
-    public boolean isApplicable(ServiceReference ref) {
+    private boolean hasMultiValueFilterForSingleMultiConfig(Filter filter) {
+    	Iterator singleMultiKeys = m_singleMultiPropertyKeys.iterator();
+    	while (singleMultiKeys.hasNext()) {
+    		String key = (String) singleMultiKeys.next();
+    		if (filter.getProperty(key).hasMultipleValues()) {
+    			return true;
+    		}
+    	}
+		return false;
+	}
+
+	public boolean isApplicable(ServiceReference ref) {
     	String[] propertyKeys = ref.getPropertyKeys();
         TreeSet referenceProperties = new TreeSet(String.CASE_INSENSITIVE_ORDER);
         for (int i = 0; i < propertyKeys.length; i++) {
@@ -111,22 +128,22 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
 			String propertyConfig = propertyConfigs[i];
 			Property property = new Property();
 			String key;
-			String value = null;
 			if (propertyConfig.startsWith("!")) {
 				property.setNegate(true);
+				key = propertyConfig.substring(1);
+			} else if (propertyConfig.startsWith("#")) {
+				property.setMulti(true);
 				key = propertyConfig.substring(1);
 			} else {
 				key = propertyConfig;
 			}
-			if (key.endsWith("*")) {
-				key = key.substring(0, key.indexOf("*"));
-				value = "*";
-			}
 			property.setKey(key.toLowerCase());
-			property.addValue(value, property.isNegate());
 			m_configProperties.put(key.toLowerCase(), property);
 			if (property.isNegate()) {
 				m_negatePropertyKeys.add(key);
+			}
+			if (property.isMulti()) {
+				m_singleMultiPropertyKeys.add(key);
 			}
 		}
 	}
@@ -135,7 +152,7 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
 		return m_configProperties.values();
 	}
 	
-    protected String createKeyFromFilter(String clazz, String filterString) {
+    protected Object createKeyFromFilter(String clazz, String filterString) {
     	return createFilter(clazz, filterString).createKey();
     }
     
@@ -157,15 +174,23 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
     protected List createKeys(ServiceReference reference) {
     	List /* <String> */ results = new ArrayList();
     	List sets = new ArrayList();   	
-    	String[] keys = reference.getPropertyKeys();
+    	// Loop through the configured properties rather than the reference's property keys
+    	String[] keys = (String[]) m_configProperties.keySet().toArray(new String[0]);
     	Arrays.sort(keys, String.CASE_INSENSITIVE_ORDER);
     	for (int i = 0; i < keys.length; i++) {
     		List set = new ArrayList();
-    		String key = keys[i].toLowerCase();
-    		if (m_configProperties.containsKey(key)) {
+    		String key = ((String)keys[i]);
+    		if (reference.getProperty(key) != null) {
 	    		Object valueObject = reference.getProperty(key);
 	    		if (valueObject instanceof String[]) {
-	    			set.addAll(getPermutations(key, (String[]) valueObject));
+	    			// permutation calculation takes singlemulti property into account, i.e. a property that can
+	    			// contain multiple values but the filter will filter for one.
+	    			Property configProperty = (Property) m_configProperties.get(key);
+	    			if (configProperty.isMulti()) {
+	    				set.addAll(getKeyValueList(key, (String[]) valueObject));
+	    			} else {
+	    				set.addAll(getPermutations(key, (String[]) valueObject));
+	    			}
 	    		} else {
 	    			set.add(toKey(key, valueObject));
 	    		}
@@ -187,16 +212,23 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
     			String item = (String) set.get(j);
     			b.append(item);
     			if (j < set.size() - 1) {
-    				b.append(";");
+    				b.append(KEY_SEPARATOR);
     			}
     		}
     		results.add(b.toString());
     	}
-    	
     	return results;
     }
     
-    /**
+    private String[] mapToCompressedTypes(String[] valueObject) {
+    	String[] compressedTypes = new String[valueObject.length];
+    	for (int i = 0; i < valueObject.length; i++) {
+    		compressedTypes[i] = ValueCache.compressValue(valueObject[i]);
+    	}
+		return compressedTypes;
+	}
+
+	/**
      * Note that we calculate the carthesian product for multi value properties. Use filters on these sparingly since memory
      * consumption can get really high when multiple properties have a lot of values.
      * 
@@ -245,12 +277,21 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
 		return results;
     }
     
+    List getKeyValueList(String key, String[] values) {
+    	List results = new ArrayList();
+    	Arrays.sort(values, String.CASE_INSENSITIVE_ORDER);
+    	for (int v = 0; v < values.length; v++) {
+    		results.add(toKey(key, values[v]));
+    	}
+    	return results;
+    }
+    
     protected String toKey(String key, List values) {
     	StringBuilder builder = new StringBuilder();
     	for (int i = 0; i < values.size(); i++) {
     		builder.append(toKey(key, (String) values.get(i)));
     		if (i < values.size() - 1) {
-    			builder.append(";");
+    			builder.append(VALUE_SEPARATOR);
     		}
     	}
     	return builder.toString();
@@ -258,9 +299,7 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
     
     protected String toKey(String key, Object value) {
     	StringBuilder builder = new StringBuilder();
-    	builder.append(key);
-		builder.append("=");
-		builder.append(value.toString());
+		builder.append(ValueCache.compressValue(value.toString()));
 		return builder.toString();
     }
     
@@ -401,7 +440,7 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
 
     public List /* <ServiceReference> */ getAllServiceReferences(String clazz, String filter) {
         List /* <ServiceReference> */ result = new ArrayList();
-        String key = createKeyFromFilter(clazz, filter);
+        Object key = createKeyFromFilter(clazz, filter);
         ServiceReference reference;
         synchronized (m_keyToServiceReferencesMap) {
             List references = (List) m_keyToServiceReferencesMap.get(key);
@@ -436,7 +475,7 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
     }
 
     public void addServiceListener(ServiceListener listener, String filter) {
-        String key = createKeyFromFilter(null, filter);
+        Object key = createKeyFromFilter(null, filter);
         synchronized (m_keyToListenersMap) {
             List /* <ServiceListener> */ listeners = (List) m_keyToListenersMap.get(key);
             if (listeners == null) {
@@ -453,7 +492,7 @@ public class MultiPropertyFilterIndex implements FilterIndex, ServiceTrackerCust
             String filter = (String) m_listenerToFilterMap.remove(listener);
             if (filter != null) {
             	// the listener does exist
-        		String key = createKeyFromFilter(null, filter);
+        		Object key = createKeyFromFilter(null, filter);
         		
         		boolean result = filter != null;
         		if (result) {

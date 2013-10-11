@@ -47,7 +47,7 @@ public class Filter {
 		String prevToken = null;
 		String key = null;
 		StringBuilder valueBuilder = new StringBuilder();
-		boolean negate = false;
+		int flag = Property.NONE;
 
 		while (tokenizer.hasMoreTokens()) {
 			prevToken = token;
@@ -58,7 +58,9 @@ public class Filter {
 				break;
 			}
 			if (token.equals("!")) {
-				negate = true;
+				flag = Property.NEGATE;
+			} else if (token.equals("#")) {
+				flag = Property.MULTI;
 			} else if (token.equals("=")) {
 				key = prevToken.toLowerCase();
 			} else if (key != null) {
@@ -70,13 +72,17 @@ public class Filter {
 					if (filter.m_properties.containsKey(key)) {
 						// set current property to multivalue
 						Property property = (Property) filter.m_properties.get(key);
-						property.addValue(valueBuilder.toString(), negate);
+						property.addValue(valueBuilder.toString());
+						// just a check whether the filter doesn't mix negate and non-negate attributes
+						if (flag != property.getFlag()) {
+							property.invalidate();
+						}
 					} else {
-						Property property = new Property(negate, key, valueBuilder.toString());
+						Property property = new Property(flag, key, valueBuilder.toString());
 						filter.m_properties.put(key, property);
 						filter.m_propertyKeys.add(key);
 					}
-					negate = false;
+					flag = Property.NONE;
 					key = null;
 					valueBuilder = new StringBuilder();
 				}
@@ -112,11 +118,6 @@ public class Filter {
 		}
 		return true;
 	}
-	
-	public static void main(String args[]) {
-		Filter parser = Filter.parse("(&(objectClass=OBJECTCLASS)(&(a=x)(a=n)(a=y)(b=y)(c=z)))");
-		System.out.println("key: " + parser.createKey());
-	}
 
 	protected String createKey() {
 		StringBuilder builder = new StringBuilder();
@@ -125,25 +126,26 @@ public class Filter {
 		while (keys.hasNext()) {
 			String key = (String) keys.next();
 			Property prop = (Property) m_properties.get(key);
-			if (!prop.isWildcard()) {
+			if (!prop.isNegate()) {
 				Iterator values = prop.getValues().iterator();
 				while (values.hasNext()) {
 					String value = (String) values.next();
-					builder.append(key);
-					builder.append("=");
-					builder.append(value);
-					if (keys.hasNext() || values.hasNext()) {
-						builder.append(";");
+					builder.append(ValueCache.compressValue(value));
+					if (values.hasNext()) {
+						builder.append(MultiPropertyFilterIndex.VALUE_SEPARATOR);
 					}
+				}
+				if (keys.hasNext()) {
+					builder.append(MultiPropertyFilterIndex.KEY_SEPARATOR);
 				}
 			}
 		}
 		// strip the final ';' in case the last key was a wildcard property
-		if (builder.charAt(builder.length() - 1) == ';') {
+		if (builder.charAt(builder.length() - 1) == MultiPropertyFilterIndex.KEY_SEPARATOR) {
 			return builder.toString().substring(0, builder.length() - 1);
 		} else {
 			return builder.toString();
 		}
-	}
+	}	
 	
 }
