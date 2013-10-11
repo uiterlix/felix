@@ -239,7 +239,7 @@ public class ResourceDependencyImpl extends DependencyBase implements ResourceDe
     
     private void invoke(DependencyService ds, URL serviceInstance, Dictionary resourceProperties, String name) {
     	if (name != null) {
-	        ds.invokeCallbackMethod(getCallbackInstances(ds), name,
+	        if (!ds.invokeCallbackMethod(getCallbackInstances(ds), name,
 	                new Class[][] {
 	        				{ Component.class, URL.class, Dictionary.class }, 
 	        				{ Component.class, URL.class },
@@ -256,7 +256,9 @@ public class ResourceDependencyImpl extends DependencyBase implements ResourceDe
 	        				{ serviceInstance },
 	        				{ serviceInstance }, 
 	        				{}}
-	            );
+	            )) {
+	        	m_logger.log(Logger.LOG_ERROR, "Could not find method " + name + " on " + ds + ".");
+	        }
     	}
     }
     

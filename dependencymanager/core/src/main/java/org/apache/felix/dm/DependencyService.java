@@ -85,7 +85,7 @@ public interface DependencyService {
     /**
      * Can be called by the dependency whenever it wants to invoke callback methods.
      */
-    public void invokeCallbackMethod(Object[] instances, String methodName, Class[][] signatures, Object[][] parameters);
+    public boolean invokeCallbackMethod(Object[] instances, String methodName, Class[][] signatures, Object[][] parameters);
 
     /**
      * Returns the component interface.

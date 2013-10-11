@@ -274,7 +274,7 @@ public interface Component {
 	 * @param signatures the signatures of the method
 	 * @param parameters the parameter values
 	 */
-    public void invokeCallbackMethod(Object[] instances, String methodName, Class[][] signatures, Object[][] parameters);
+    public boolean invokeCallbackMethod(Object[] instances, String methodName, Class[][] signatures, Object[][] parameters);
 	
 	/**
 	 * Returns the dependency manager associated with this component.

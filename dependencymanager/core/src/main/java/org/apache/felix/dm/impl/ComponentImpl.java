@@ -41,6 +41,7 @@ import org.apache.felix.dm.DependencyActivation;
 import org.apache.felix.dm.DependencyManager;
 import org.apache.felix.dm.DependencyService;
 import org.apache.felix.dm.InvocationUtil;
+import org.apache.felix.dm.impl.dependencies.ServiceDependencyImpl;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
@@ -236,7 +237,7 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
     	State oldState, newState;
         synchronized (m_dependencies) {
         	oldState = m_state;
-            m_dependencies.add(dependency);
+            addDependency(dependency);
         }
         
         // if we're inactive, don't do anything, otherwise we might want to start
@@ -272,7 +273,7 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         synchronized (m_dependencies) {
             oldState = m_state;
             for (int i = 0; i < dependencies.size(); i++) {
-                m_dependencies.add(dependencies.get(i));
+                addDependency((Dependency)dependencies.get(i));
             }
         }
         
@@ -306,6 +307,113 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         calculateStateChanges(oldState, newState);
         return this;
     }
+    
+    /* Start of duplicated dependency detection experiment */
+    private static boolean LOG_DUPLICATE_DEPENDENCIES = Boolean.parseBoolean(System.getProperty("org.apache.felix.dependencymanager.logDuplicateDependencies", "false"));
+    
+    private void addDependency(Dependency dependency) {
+    	if (LOG_DUPLICATE_DEPENDENCIES) {
+    		checkIfAlreadyExists(dependency);
+    	}
+    	m_dependencies.add(dependency);
+    }
+    
+    private void checkIfAlreadyExists(Dependency dependency) {
+
+    	if (dependency instanceof ServiceDependencyImpl) {
+	    	List dependencyDataList = new ArrayList();
+			Iterator depIterator = m_dependencies.iterator();
+			while (depIterator.hasNext()) {
+				Object depObject = depIterator.next();
+				if (depObject instanceof ServiceDependencyImpl) {
+					ServiceDependencyImpl serviceDependencyImpl = (ServiceDependencyImpl) depObject;
+					DependencyData dependencyData = createDependencyData(serviceDependencyImpl);
+					dependencyDataList.add(dependencyData);
+				}
+			}
+			DependencyData addedDependencyData = createDependencyData((ServiceDependencyImpl)dependency);
+			if (dependencyDataList.contains(addedDependencyData)) {
+				// dependency already exists on this component
+				m_logger.log(Logger.LOG_ERROR, "Dependency has already been added: " + addedDependencyData + " to component: " + this);
+			}
+    	}
+	}
+    
+    private DependencyData createDependencyData(ServiceDependencyImpl serviceDependencyImpl) {
+    	DependencyData dependencyData = null;
+	    try {
+	    	Field serviceNameField = serviceDependencyImpl.getClass().getDeclaredField("m_trackedServiceName");
+			serviceNameField.setAccessible(true);
+			String trackedServiceName = ((Class)serviceNameField.get(serviceDependencyImpl)).getName();
+			Field serviceFilterField = serviceDependencyImpl.getClass().getDeclaredField("m_trackedServiceFilter");
+			serviceFilterField.setAccessible(true);
+			String trackedServiceFilter = (String)serviceFilterField.get(serviceDependencyImpl);
+			dependencyData = new DependencyData(trackedServiceName, trackedServiceFilter);
+    	} catch (SecurityException e) {
+    		e.printStackTrace();
+    	} catch (NoSuchFieldException e) {
+    		e.printStackTrace();
+    	} catch (IllegalArgumentException e) {
+    		e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}    
+	    return dependencyData;
+	}
+
+	static class DependencyData {
+    	String m_trackedServiceName;
+    	String m_trackedServiceFilter;
+    	
+    	public DependencyData(String trackedServiceName, String trackedServiceFilter) {
+    		this.m_trackedServiceName = trackedServiceName;
+    		this.m_trackedServiceFilter = trackedServiceFilter;
+    	}
+
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime
+					* result
+					+ ((m_trackedServiceFilter == null) ? 0
+							: m_trackedServiceFilter.hashCode());
+			result = prime
+					* result
+					+ ((m_trackedServiceName == null) ? 0
+							: m_trackedServiceName.hashCode());
+			return result;
+		}
+		
+		public String toString() {
+			return "[m_trackedServiceName="
+					+ m_trackedServiceName + ", m_trackedServiceFilter="
+					+ m_trackedServiceFilter + "]";
+		}
+
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			DependencyData other = (DependencyData) obj;
+			if (m_trackedServiceFilter == null) {
+				if (other.m_trackedServiceFilter != null)
+					return false;
+			} else if (!m_trackedServiceFilter
+					.equals(other.m_trackedServiceFilter))
+				return false;
+			if (m_trackedServiceName == null) {
+				if (other.m_trackedServiceName != null)
+					return false;
+			} else if (!m_trackedServiceName.equals(other.m_trackedServiceName))
+				return false;
+			return true;
+		}
+    	
+    }
+    /* End of duplicated dependency detection experiment */
 
     public Component remove(Dependency dependency) {
     	State oldState, newState;
@@ -605,7 +713,7 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         m_isInstantiated = true;
         // then we invoke the init callback so the service can further initialize
         // itself
-        invoke(init);
+        invokeLifecycleCallback(init);
         // see if any of this caused further state changes
         calculateStateChanges();
     }
@@ -621,7 +729,7 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         // inform the state listeners we're starting
         stateListenersStarting();
         // invoke the start callback, since we're now ready to be used
-        invoke(start);
+        invokeLifecycleCallback(start);
         // start tracking optional services
         startTrackingOptional(state);
         // register the service in the framework's service registry
@@ -653,7 +761,7 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         // stop tracking optional services
         stopTrackingOptional(state);
         // invoke the stop callback
-        invoke(stop);
+        invokeLifecycleCallback(stop);
         // inform the state listeners we've stopped
         stateListenersStopped();
     }
@@ -666,12 +774,12 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         // flag that our instance was destroyed
         m_isInstantiated = false;
         // invoke the destroy callback
-        invoke(destroy);
+        invokeLifecycleCallback(destroy);
         // destroy the service instance
         destroyService(state);
     }
     
-    private void invoke(String name) {
+    private void invokeLifecycleCallback(String name) {
         if (name != null) {
             // if a callback instance was specified, look for the method there, if not,
             // ask the service for its composition instances
@@ -682,22 +790,26 @@ public class ComponentImpl implements Component, DependencyService, ComponentDec
         }
     }
     
-    public void invokeCallbackMethod(Object[] instances, String methodName, Class[][] signatures, Object[][] parameters) {
+    public boolean invokeCallbackMethod(Object[] instances, String methodName, Class[][] signatures, Object[][] parameters) {
         for (int i = 0; i < instances.length; i++) {
             try {
                 InvocationUtil.invokeCallbackMethod(instances[i], methodName, signatures, parameters);
             }
             catch (NoSuchMethodException e) {
                 // if the method does not exist, ignore it
+            	return false;
             }
             catch (InvocationTargetException e) {
                 // the method itself threw an exception, log that
                 m_logger.log(Logger.LOG_WARNING, "Invocation of '" + methodName + "' failed.", e.getCause());
+                return false;
             }
             catch (Exception e) {
                 m_logger.log(Logger.LOG_WARNING, "Could not invoke '" + methodName + "'.", e);
+                return false;
             }
         }
+        return true;
     }
 
     private void startTrackingOptional(State state) {
