@@ -31,6 +31,7 @@ import org.apache.felix.scr.impl.TargetedPID;
 import org.apache.felix.scr.impl.config.ComponentHolder;
 import org.apache.felix.scr.impl.helper.ComponentMethods;
 import org.apache.felix.scr.impl.metadata.ComponentMetadata;
+import org.osgi.framework.Constants;
 import org.osgi.service.log.LogService;
 
 /**
@@ -54,14 +55,29 @@ public class ConfigurationComponentFactoryImpl<S> extends ComponentFactoryImpl<S
 
     /**
      * The map of components created from Configuration objects maps PID to
-     * {@link org.apache.felix.scr.impl.manager.ImmediateComponentManager} for configuration updating this map is
+     * {@link org.apache.felix.scr.impl.manager.SingleComponentManager} for configuration updating this map is
      * lazily created.
      */
-    private final Map<String, ImmediateComponentManager<S>> m_configuredServices = new HashMap<String, ImmediateComponentManager<S>>();
+    private final Map<String, SingleComponentManager<S>> m_configuredServices = new HashMap<String, SingleComponentManager<S>>();
 
     public ConfigurationComponentFactoryImpl( BundleComponentActivator activator, ComponentMetadata metadata )
     {
         super( activator, metadata );
+    }
+
+
+    @Override
+    public Dictionary<String, Object> getServiceProperties()
+    {
+        Dictionary<String, Object> props = super.getServiceProperties();
+        // also register with the factory PID
+        props.put( Constants.SERVICE_PID, getComponentMetadata().getConfigurationPid() );
+
+        // descriptive service properties
+        props.put( Constants.SERVICE_DESCRIPTION, "Configurable (nonstandard) Factory Component "
+            + getComponentMetadata().getName() );
+        
+        return props;
     }
 
 
@@ -115,7 +131,7 @@ public class ConfigurationComponentFactoryImpl<S> extends ComponentFactoryImpl<S
         }
         else
         {
-            ImmediateComponentManager<S> cm;
+            SingleComponentManager<S> cm;
             synchronized ( m_configuredServices )
             {
                 cm = m_configuredServices.remove( pid );
@@ -139,7 +155,7 @@ public class ConfigurationComponentFactoryImpl<S> extends ComponentFactoryImpl<S
         }
         else   //non-spec backwards compatible
         {
-            ImmediateComponentManager<S> cm;
+            SingleComponentManager<S> cm;
             synchronized ( m_configuredServices )
             {
                 cm = m_configuredServices.get( pid );
@@ -218,7 +234,7 @@ public class ConfigurationComponentFactoryImpl<S> extends ComponentFactoryImpl<S
         }
         synchronized ( m_configuredServices )
         {
-            ImmediateComponentManager icm = m_configuredServices.get( pid );
+            SingleComponentManager icm = m_configuredServices.get( pid );
             return icm == null? -1: icm.getChangeCount();
         }
     }
@@ -228,17 +244,17 @@ public class ConfigurationComponentFactoryImpl<S> extends ComponentFactoryImpl<S
 
 
     /**
-     * Creates an {@link org.apache.felix.scr.impl.manager.ImmediateComponentManager} instance with the
+     * Creates an {@link org.apache.felix.scr.impl.manager.SingleComponentManager} instance with the
      * {@link org.apache.felix.scr.impl.BundleComponentActivator} and {@link org.apache.felix.scr.impl.metadata.ComponentMetadata} of this
      * instance. The component manager is kept in the internal set of created
      * components. The component is neither configured nor enabled.
      */
-    private ImmediateComponentManager<S> createConfigurationComponentManager()
+    private SingleComponentManager<S> createConfigurationComponentManager()
     {
         return new ComponentFactoryConfiguredInstance<S>( getActivator(), this, getComponentMetadata(), getComponentMethods() );
     }
 
-    static class ComponentFactoryConfiguredInstance<S> extends ImmediateComponentManager<S> {
+    static class ComponentFactoryConfiguredInstance<S> extends SingleComponentManager<S> {
 
         public ComponentFactoryConfiguredInstance( BundleComponentActivator activator, ComponentHolder componentHolder,
                 ComponentMetadata metadata, ComponentMethods componentMethods )

@@ -70,7 +70,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
      * entry is the same as the entry's key.
      * This is an IdentityHashMap for speed, thus not a Set.
      */
-    private final Map<ImmediateComponentManager<S>, ImmediateComponentManager<S>> m_componentInstances;
+    private final Map<SingleComponentManager<S>, SingleComponentManager<S>> m_componentInstances;
 
     /**
      * The configuration for the component factory. This configuration is
@@ -96,7 +96,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
     public ComponentFactoryImpl( BundleComponentActivator activator, ComponentMetadata metadata )
     {
         super( activator, metadata, new ComponentMethods() );
-        m_componentInstances = new IdentityHashMap<ImmediateComponentManager<S>, ImmediateComponentManager<S>>();
+        m_componentInstances = new IdentityHashMap<SingleComponentManager<S>, SingleComponentManager<S>>();
         m_configuration = new Hashtable<String, Object>();
     }
 
@@ -112,7 +112,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
     */
     public ComponentInstance newInstance( Dictionary<String, ?> dictionary )
     {
-        final ImmediateComponentManager<S> cm = createComponentManager();
+        final SingleComponentManager<S> cm = createComponentManager();
         log( LogService.LOG_DEBUG, "Creating new instance from component factory {0} with configuration {1}",
                 new Object[] {getComponentMetadata().getName(), dictionary}, null );
 
@@ -129,7 +129,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
         if ( instance == null || instance.getInstance() == null )
         {
             // activation failed, clean up component manager
-            cm.disposeInternal( ComponentConstants.DEACTIVATION_REASON_DISPOSED );
+            cm.dispose( ComponentConstants.DEACTIVATION_REASON_DISPOSED );
             throw new ComponentException( "Failed activating component" );
         }
 
@@ -248,12 +248,6 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
         props.put( ComponentConstants.COMPONENT_NAME, getComponentMetadata().getName() );
         props.put( ComponentConstants.COMPONENT_FACTORY, getComponentMetadata().getFactoryIdentifier() );
 
-        // also register with the factory PID
-        props.put( Constants.SERVICE_PID, getComponentMetadata().getName() );
-
-        // descriptive service properties
-        props.put( Constants.SERVICE_DESCRIPTION, "ManagedServiceFactory for Factory Component"
-            + getComponentMetadata().getName() );
         props.put( Constants.SERVICE_VENDOR, "The Apache Software Foundation" );
 
         return props;
@@ -319,7 +313,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
             if ( ( getState() & STATE_DISPOSED ) == 0 && getComponentMetadata().isConfigurationRequired() )
             {
                 log( LogService.LOG_DEBUG, "Deactivating component factory (required configuration has gone)", null );
-                deactivateInternal( ComponentConstants.DEACTIVATION_REASON_CONFIGURATION_DELETED, true, getTrackingCount().get() );
+                deactivateInternal( ComponentConstants.DEACTIVATION_REASON_CONFIGURATION_DELETED, true, false );
             }
         }
         else
@@ -380,14 +374,14 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
                 log( LogService.LOG_INFO, "Verifying if Active Component Factory is still satisfied", null );
 
                 // First update target filters.
-                super.updateTargets( getProperties() );
+                updateTargets( getProperties() );
 
                 // Next, verify dependencies
                 if ( !verifyDependencyManagers() )
                 {
                     log( LogService.LOG_DEBUG,
                             "Component Factory target filters not satisfied anymore: deactivating", null );
-                    deactivateInternal( ComponentConstants.DEACTIVATION_REASON_REFERENCE, false, getTrackingCount().get() );
+                    deactivateInternal( ComponentConstants.DEACTIVATION_REASON_REFERENCE, false, false );
                     return false;
                 }
             }
@@ -398,6 +392,8 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
             {
                 // try to activate our component factory, if all dependnecies are satisfied
                 log( LogService.LOG_DEBUG, "Attempting to activate unsatisfied component", null );
+                // First update target filters.
+                updateTargets( getProperties() );
                 activateInternal( getTrackingCount().get() );
             }
         }
@@ -476,7 +472,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
     }
 
 
-    public void disposed( ImmediateComponentManager component )
+    public void disposed( SingleComponentManager component )
     {
         synchronized ( m_componentInstances )
         {
@@ -489,18 +485,18 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
 
 
     /**
-     * Creates an {@link ImmediateComponentManager} instance with the
+     * Creates an {@link SingleComponentManager} instance with the
      * {@link BundleComponentActivator} and {@link ComponentMetadata} of this
      * instance. The component manager is kept in the internal set of created
      * components. The component is neither configured nor enabled.
      */
-    private ImmediateComponentManager<S> createComponentManager()
+    private SingleComponentManager<S> createComponentManager()
     {
         return new ComponentFactoryNewInstance<S>( getActivator(), this, getComponentMetadata(), getComponentMethods() );
     }
 
 
-    protected void getComponentManagers( Map<?, ImmediateComponentManager<S>> componentMap, List<AbstractComponentManager<S>> componentManagers )
+    protected void getComponentManagers( Map<?, SingleComponentManager<S>> componentMap, List<AbstractComponentManager<S>> componentManagers )
     {
         if ( componentMap != null )
         {
@@ -511,7 +507,7 @@ public class ComponentFactoryImpl<S> extends AbstractComponentManager<S> impleme
         }
     }
 
-    static class ComponentFactoryNewInstance<S> extends ImmediateComponentManager<S> {
+    static class ComponentFactoryNewInstance<S> extends SingleComponentManager<S> {
 
         public ComponentFactoryNewInstance( BundleComponentActivator activator, ComponentHolder componentHolder,
                 ComponentMetadata metadata, ComponentMethods componentMethods )

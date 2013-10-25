@@ -523,7 +523,7 @@ public class ServiceDependencyImpl extends DependencyBase implements ServiceDepe
     }
 
     public void removedService(ServiceReference ref, Object service) {
-		debugLog("removedservice: " + ref);
+	debugLog("removedservice: " + ref + ", rank: " + ref.getProperty("service.ranking"));
         boolean makeUnavailable = makeUnavailable();
     	debugLog("make unavailable: " + makeUnavailable);
         Object[] services;

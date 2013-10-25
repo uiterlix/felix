@@ -14,121 +14,220 @@
     License for the specific language governing permissions and
     limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>felix-parent</artifactId>
-        <version>1.2.0</version>
-        <relativePath>../../pom/pom.xml</relativePath>
-    </parent>
-    <properties>
-        <osgi.version>4.2.0</osgi.version>
-        <pax.exam.version>1.2.0</pax.exam.version>
-    </properties>
-    <name>Apache Felix Dependency Manager Integration Tests</name>
-    <artifactId>org.apache.felix.dependencymanager.test</artifactId>
-    <version>3.0.1-SNAPSHOT</version>
-    <dependencies>
-        <dependency>
-            <groupId>${pom.groupId}</groupId>
-            <artifactId>org.apache.felix.dependencymanager</artifactId>
-            <version>3.1.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${pom.groupId}</groupId>
-            <artifactId>org.apache.felix.dependencymanager.annotation</artifactId>
-            <version>3.1.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${pom.groupId}</groupId>
-            <artifactId>org.apache.felix.dependencymanager.runtime</artifactId>
-            <version>3.1.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${pom.groupId}</groupId>
-            <artifactId>org.apache.felix.dependencymanager.shell</artifactId>
-            <version>3.0.2-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${pom.groupId}</groupId>
-            <artifactId>org.apache.felix.shell</artifactId>
-            <version>1.4.2</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-            <version>${osgi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.compendium</artifactId>
-            <version>${osgi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>biz.aQute</groupId>
-            <artifactId>bndlib</artifactId>
-            <version>2.0.0.20130123-133441</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam</artifactId>
-            <version>${pax.exam.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-container-default</artifactId>
-            <version>${pax.exam.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-junit</artifactId>
-            <version>${pax.exam.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.7</version>
-        </dependency>
-    </dependencies>
-    <build>
-        <plugins>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
-                    <useDefaultManifestFile>false</useDefaultManifestFile>
-                    <compilerArgument>-g</compilerArgument>
-                    <compilerVersion>1.5</compilerVersion>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>default-testCompile</id>
-                        <configuration>
-                            <source>1.5</source>
-                            <target>1.5</target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.ops4j.pax.exam</groupId>
-                <artifactId>maven-paxexam-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>generate-config</id>
-                        <goals>
-                            <goal>generate-depends-file</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.apache.felix</groupId>
+		<artifactId>felix-parent</artifactId>
+		<version>2.1</version>
+		<relativePath>../../pom/pom.xml</relativePath>
+	</parent>
+
+	<artifactId>org.apache.felix.dependencymanager.test</artifactId>
+	<version>3.0.1-SNAPSHOT</version>
+	<packaging>bundle</packaging>
+
+	<name>Apache Felix Dependency Manager Integration Tests</name>
+
+	<properties>
+		<bundle.build.name>
+			${basedir}/target
+		</bundle.build.name>
+		<bundle.file.name>
+			${bundle.build.name}/${project.build.finalName}.jar
+		</bundle.file.name>
+
+		<felix.build.source>5</felix.build.source>
+		<felix.build.target>5</felix.build.target>
+		<felix.java.signature.artifactId>java15</felix.java.signature.artifactId>
+		<exam.version>3.0.0</exam.version>
+		<url.version>1.5.2</url.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.core</artifactId>
+			<version>5.0.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.compendium</artifactId>
+			<version>5.0.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.dependencymanager</artifactId>
+			<version>3.1.1-SNAPSHOT</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.shell</artifactId>
+			<version>1.4.2</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.6</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Integration Testing with Pax Exam -->
+		<!-- 
+		<dependency>
+			<groupId>org.ops4j.pax.exam</groupId>
+			<artifactId>pax-exam-container-native</artifactId>
+			<version>${exam.version}</version>
+			<scope>test</scope>
+		</dependency>
+ 		-->
+ 		<dependency>
+  		  <groupId>org.ops4j.pax.exam</groupId>
+    		<artifactId>pax-exam-container-forked</artifactId>
+    		<version>${exam.version}</version>
+    		<scope>test</scope>
+		</dependency>
+ 
+		<dependency>
+			<groupId>org.ops4j.pax.exam</groupId>
+			<artifactId>pax-exam-junit4</artifactId>
+			<version>${exam.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.ops4j.pax.exam</groupId>
+			<artifactId>pax-exam-link-mvn</artifactId>
+			<version>${exam.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.ops4j.pax.url</groupId>
+			<artifactId>pax-url-aether</artifactId>
+			<version>${url.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.framework</artifactId>
+			<version>4.2.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>0.9.29</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>0.9.29</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Dependency Manager Annotations -->
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.dependencymanager.annotation</artifactId>
+			<version>3.1.1-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- Build the bundle which contains various components used by integration tests -->
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>2.3.7</version>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-Name>Apache Felix Dependency Manager Annotations Tests</Bundle-Name>
+						<Bundle-SymbolicName>${pom.artifactId}</Bundle-SymbolicName>
+						<Export-Package>org.apache.felix.dm.test.components</Export-Package>
+					</instructions>
+				</configuration>
+			</plugin>
+			
+			<!-- java 5 required for annotations support -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.5</source>
+					<target>1.5</target>
+				</configuration>
+			</plugin>
+			
+			<!-- DM annotation plugin used to parse annotations from org.apache.felix.dm.test.components artifact -->
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>org.apache.felix.dependencymanager.annotation</artifactId>
+				<version>3.1.1-SNAPSHOT</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>scan</goal>
+						</goals>
+						<configuration>
+							<log>debug</log>
+							<!-- generated-output-dir>.</generated-output-dir> -->
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- We have no unit tests, we only have integration tests -->
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>surefire-it</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+						<configuration>
+							<systemProperties>
+								<property>
+									<name>project.bundle.file</name>
+									<value>${bundle.file.name}</value>
+								</property>
+								<property>
+									<name>project.bundle.symbolicName</name>
+									<value>${pom.artifactId}</value>
+								</property>								
+							</systemProperties>
+							<excludes>
+								<exclude>**/components/*</exclude>
+								<!-- <exclude>**/AspectRaceTest.java</exclude> -->							
+							</excludes>
+							<includes>
+								<!-- By default, all integration tests are run. For running a specific test, 
+								     you can specify a given test below: for example:
+								     <include>**/integration/**/AspectBaseTest.java</include>
+								-->
+								<include>**/integration/**/*.java</include>
+							</includes>
+						</configuration>
+					</execution>
+				</executions>
+				<configuration>
+					<excludes>
+						<exclude>**/integration/**</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>
