@@ -19,6 +19,9 @@
 package org.apache.felix.scr.impl.manager;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import org.osgi.service.log.LogService;
 
 /**
  * EdgeInfo holds information about the service event tracking counts for creating (open) and disposing (close) 
@@ -47,8 +50,8 @@ class EdgeInfo
 {
     private int open = -1;
     private int close = -1;
-    private CountDownLatch openLatch;
-    private CountDownLatch closeLatch;
+    private final CountDownLatch openLatch = new CountDownLatch(1);
+    private final CountDownLatch closeLatch = new CountDownLatch(1);
 
     public void setClose( int close )
     {
@@ -59,30 +62,97 @@ class EdgeInfo
     {
         return openLatch;
     }
-
-    public void setOpenLatch( CountDownLatch latch )
-    {
-        this.openLatch = latch;
-    }
     
+    public void waitForOpen(AbstractComponentManager m_componentManager, String componentName, String methodName)
+    {
+        
+        CountDownLatch latch = getOpenLatch();
+        String latchName = "open";
+        waitForLatch( m_componentManager, latch, componentName, methodName, latchName );
+    }
+
+    public void waitForClose(AbstractComponentManager m_componentManager, String componentName, String methodName)
+    {
+        
+        CountDownLatch latch = getCloseLatch();
+        String latchName = "close";
+        waitForLatch( m_componentManager, latch, componentName, methodName, latchName );
+    }
+
+    private void waitForLatch(AbstractComponentManager m_componentManager, CountDownLatch latch, String componentName,
+            String methodName, String latchName)
+    {
+        try
+        {
+            if (!latch.await( m_componentManager.getLockTimeout(), TimeUnit.MILLISECONDS ))
+            {
+                m_componentManager.log( LogService.LOG_ERROR,
+                        "DependencyManager : {0} : timeout on {1} latch {2}",  new Object[] {methodName, latchName, componentName}, null );
+                m_componentManager.dumpThreads();
+            }
+        }
+        catch ( InterruptedException e )
+        {
+            try
+            {
+                if (!latch.await( m_componentManager.getLockTimeout(), TimeUnit.MILLISECONDS ))
+                {
+                    m_componentManager.log( LogService.LOG_ERROR,
+                            "DependencyManager : {0} : timeout on {1} latch {2}",  new Object[] {methodName, latchName, componentName}, null );
+                    m_componentManager.dumpThreads();
+                }
+            }
+            catch ( InterruptedException e1 )
+            {
+                m_componentManager.log( LogService.LOG_ERROR,
+                        "DependencyManager : {0} : Interrupted twice on {1} latch {2}",  new Object[] {methodName, latchName, componentName}, null );
+                Thread.currentThread().interrupt();
+            }
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public CountDownLatch getCloseLatch()
     {
         return closeLatch;
-    }
-
-    public void setCloseLatch( CountDownLatch latch )
-    {
-        this.closeLatch = latch;
     }
 
     public void setOpen( int open )
     {
         this.open = open;
     }
+    
+    public void ignore()
+    {
+        open = Integer.MAX_VALUE;
+        close = Integer.MAX_VALUE - 1;
+        openLatch.countDown();
+        closeLatch.countDown();
+    }
 
+    /**
+     * Returns whether the tracking count is before the open count or after the close count (if set)
+     * This must be called from within a block synchronized on m_tracker.tracked().
+     * Setting open occurs in a synchronized block as well, to the tracker's current tracking count.
+     * Therefore if this outOfRange call finds open == -1 then open will be set to a tracking count 
+     * at least as high as the argument tracking count.
+     * @param trackingCount tracking count from tracker to compare with range
+     * @return true if open not set, tracking count before open, or close set and tracking count after close.
+     */
     public boolean outOfRange( int trackingCount )
     {
-        return (open != -1 && trackingCount < open)
-            || (close != -1 && trackingCount > close);
+        return open == -1 
+                || trackingCount < open
+                || (close != -1 && trackingCount > close);
+    }
+    
+    public boolean beforeRange( int trackingCount )
+    {
+        return open == -1 || trackingCount < open;
+    }
+    
+    public boolean afterRange( int trackingCount )
+    {
+        return close != -1 && trackingCount > close;
     }
 }

@@ -39,6 +39,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,6 +138,7 @@ public abstract class ComponentTestBase
         builder.setHeader("Export-Package", "org.apache.felix.scr.integration.components," +
                                             "org.apache.felix.scr.integration.components.activatesignature," +
                                             "org.apache.felix.scr.integration.components.circular," +
+                                            "org.apache.felix.scr.integration.components.circularFactory," +
                                             "org.apache.felix.scr.integration.components.concurrency," +
                                             "org.apache.felix.scr.integration.components.felix3680," +
                                             "org.apache.felix.scr.integration.components.felix3680_2");
@@ -581,6 +583,23 @@ public abstract class ComponentTestBase
                     out.println();
                 }
             }
+        }
+    }
+    
+    protected boolean isAtLeastR5() 
+    {
+        try
+        {
+            Method m = org.osgi.service.cm.Configuration.class.getDeclaredMethod( "getChangeCount");
+            return true;
+        }
+        catch ( SecurityException e )
+        {
+            throw new RuntimeException(e);
+        }
+        catch ( NoSuchMethodException e )
+        {
+            return false;
         }
     }
 
