@@ -54,23 +54,23 @@ public class InvocationUtil {
      * @param signatures the ordered list of signatures to look for
      * @param parameters the parameter values to use for each potential signature
      * @return whatever the method returns
-     * @throws NoSuchMethodException when no method could be found
+     * @throws MethodNotFoundException when no method could be found
      * @throws IllegalArgumentException when illegal values for this methods arguments are supplied 
      * @throws IllegalAccessException when the method cannot be accessed
      * @throws InvocationTargetException when the method that was invoked throws an exception
      */
-    public static Object invokeCallbackMethod(Object instance, String methodName, Class[][] signatures, Object[][] parameters) throws NoSuchMethodException, IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+    public static Object invokeCallbackMethod(Object instance, String methodName, Class[][] signatures, Object[][] parameters) throws MethodNotFoundException, IllegalArgumentException, IllegalAccessException, InvocationTargetException {
         Class currentClazz = instance.getClass();
         while (currentClazz != null && currentClazz != Object.class) {
             try {
                 return invokeMethod(instance, currentClazz, methodName, signatures, parameters, false);
             }
-            catch (NoSuchMethodException nsme) {
+            catch (MethodNotFoundException nsme) {
                 // ignore
             }
             currentClazz = currentClazz.getSuperclass();
         }
-        throw new NoSuchMethodException(methodName);
+        throw new MethodNotFoundException(methodName);
     }
 
     /**
@@ -83,12 +83,12 @@ public class InvocationUtil {
      * @param parameters the parameter values for the signatures
      * @param isSuper <code>true</code> if this is a superclass and we should therefore not look for private methods
      * @return whatever the method returns
-     * @throws NoSuchMethodException when no method could be found
+     * @throws MethodNotFoundException when no method could be found
      * @throws IllegalArgumentException when illegal values for this methods arguments are supplied 
      * @throws IllegalAccessException when the method cannot be accessed
      * @throws InvocationTargetException when the method that was invoked throws an exception
      */
-    public static Object invokeMethod(Object object, Class clazz, String name, Class[][] signatures, Object[][] parameters, boolean isSuper) throws NoSuchMethodException, InvocationTargetException, IllegalArgumentException, IllegalAccessException {
+    public static Object invokeMethod(Object object, Class clazz, String name, Class[][] signatures, Object[][] parameters, boolean isSuper) throws MethodNotFoundException, InvocationTargetException, IllegalArgumentException, IllegalAccessException {
         if (object == null) {
             throw new IllegalArgumentException("Instance cannot be null");
         }
@@ -111,7 +111,7 @@ public class InvocationUtil {
                 return m.invoke(object, parameters[i]);
             }
         }
-        throw new NoSuchMethodException(name);
+        throw new MethodNotFoundException(name);
     }
     
     private static Method getDeclaredMethod(Class clazz, String name, Class[] signature, boolean isSuper) {

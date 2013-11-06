@@ -88,9 +88,9 @@
                         <Export-Package>org.apache.felix.dm;version="3.0.0";provide:=true,org.apache.felix.dm.tracker;version="3.1.0";provide:=true</Export-Package>
                         <Import-Package>*</Import-Package>
                         <Private-Package>org.apache.felix.dm.impl, org.apache.felix.dm.impl.*</Private-Package>
-                        <!-- Uncomment this next line to include source code in the bundle.
+                        <!-- Uncomment this next line to include source code in the bundle. -->
                         <Include-Resource>src/main/java</Include-Resource>
-                        -->
+                        <!--  -->
                     </instructions>
                 </configuration>
             </plugin>
