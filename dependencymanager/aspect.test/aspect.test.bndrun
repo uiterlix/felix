@@ -1,0 +1,8 @@
+-runfw: org.eclipse.osgi;version='[3.7,4)'
+-runee: JavaSE-1.6
+-runvm: -Dosgi.console -Dorg.apache.felix.dependencymanager.filterindex=objectClass
+-runrequires: osgi.identity;filter:='(osgi.identity=aspect.test)'
+-runbundles: aspect.test;version=latest,\
+	core.dependencymanager;version=latest,\
+	org.apache.felix.configadmin;version='[1.4.0,1.4.1)',\
+	org.apache.felix.metatype;version='[1.0.4,1.0.5)'

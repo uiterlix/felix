@@ -1,0 +1,7 @@
+-buildpath: osgi.core;version=4.2.0,\
+	osgi.cmpn;version=4.2.0.200908310645,\
+	core.dependencymanager;version=latest
+Bundle-Activator: index.test.Activator
+Private-Package: index.test
+-runfw: org.eclipse.osgi;version='[3.7.2.v20120110-1415,3.7.2.v20120110-1415]'
+-runee: JavaSE-1.6

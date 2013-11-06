@@ -1,0 +1,7 @@
+-buildpath: osgi.core;version=4.2.0,\
+	osgi.cmpn;version=4.2.0.200908310645,\
+	core.dependencymanager;version=latest
+Bundle-Version: 1.0.0
+Bundle-Activator: aspect.test.impl.Activator
+Private-Package: aspect.test.impl
+Export-Package: aspect.test
