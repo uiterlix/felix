@@ -23,6 +23,10 @@ public class ConsumerImpl {
 		System.out.println("remove producer " + producer.produce());
 		this.producer = null;
 	}
+	
+	void changeProducer() {
+		System.out.println("> Producer change..");
+	}
 
 	public void consume() {
 		System.out.println("Consume: " + producer.produce());

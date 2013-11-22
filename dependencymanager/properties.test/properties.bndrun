@@ -1,0 +1,13 @@
+-runfw: org.eclipse.osgi;version='[3.7,4)'
+-runee: JavaSE-1.6
+-runsystemcapabilities: ${native_capability}
+
+-resolve.effective: active
+
+-runvm: -Dosgi.console -Dorg.apache.felix.dependencymanager.filterindex="*aspect*;*adapter*;objectClass,name;objectClass"
+-runrequires: osgi.identity;filter:='(osgi.identity=properties.test)'
+-runbundles: core.dependencymanager;version=latest,\
+	org.apache.felix.configadmin;version='[1.6.0,1.6.1)',\
+	org.apache.felix.log;version='[1.0.1,1.0.2)',\
+	osgi.residential;version='[4.3.0,4.3.1)',\
+	properties.test;version=latest

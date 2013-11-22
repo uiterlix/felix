@@ -1,0 +1,6 @@
+-buildpath: osgi.core,\
+	core.dependencymanager;version=latest
+Bundle-Version: 1.0.0
+Bundle-Activator: properties.test.impl.Activator
+Private-Package: properties.test.impl
+Export-Package: properties.test
