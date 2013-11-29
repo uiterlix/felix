@@ -165,12 +165,16 @@ public class DependencyManager<S, T> implements Reference
 
         public boolean isSatisfied()
         {
+            ServiceTracker<T, RefPair<T>> tracker = getTracker();
+            if ( tracker == null)
+            {
+                return false;
+            }
             if (isOptional())
             {
                 return true;
             }            
-            ServiceTracker<T, RefPair<T>> tracker = getTracker();
-            return !(tracker == null) && !tracker.isEmpty();
+            return !tracker.isEmpty();
         }
 
         protected ServiceTracker<T, RefPair<T>> getTracker()
@@ -979,15 +983,17 @@ public class DependencyManager<S, T> implements Reference
 
         public void close()
         {
+            RefPair<T> ref;
             synchronized ( getTracker().tracked() )
             {
-                if ( refPair != null )
-                {
-                    ungetService( refPair );
-                }
+                ref = refPair;
                 refPair = null;
-                getTracker().deactivate();
             }
+            if ( ref != null )
+            {
+                ungetService( ref );
+            }
+            getTracker().deactivate();
         }
 
         public Collection<RefPair<T>> getRefs( AtomicInteger trackingCount )

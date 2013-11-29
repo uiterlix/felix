@@ -46,5 +46,9 @@
 		<module>fragment1</module>
 		<module>rp1</module>
 		<module>rp2</module>
+		<module>bundleapi1</module>
+		<module>bundleapi2</module>
+		<module>bundleimpl1</module>
+		<module>bundleimpl2</module>
 	</modules>
 </project>
